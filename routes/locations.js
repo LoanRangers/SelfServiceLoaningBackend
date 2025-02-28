@@ -6,28 +6,32 @@ router.use(jsonParser);
 
 /**
  * @swagger
- * /users:
+ * /locations:
  *   get:
- *     description: Returns all users
+ *     description: Returns all locations
  *     responses:
  *       200:
- *         description: All users returned successfully
+ *         description: All locations returned successfully
  *       500:
  *         description: Internal server error
  */
 router.get('/', async (req, res) => {
-  const user = await prisma.users.findMany();
-  res.send(user);
+  const locations = await prisma.locations.findMany();
+  res.send(locations);
 });
 
 router.post('/', jsonParser, async (req, res) => {
-  const user = await prisma.users.create({
-    data: {},
+  const body = req.body;
+  const location = await prisma.locations.create({
+    data: {
+      name: body.name,
+    },
     select: {
       id: true,
+      name: true,
     },
   });
-  res.send(user);
+  res.send(location);
 });
 
 export default router;

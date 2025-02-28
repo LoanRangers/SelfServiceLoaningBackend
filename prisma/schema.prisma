@@ -1,0 +1,84 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id                 String                @id @default(uuid())
+  ssoId              String?
+  ssoName            String?
+  isAdmin            Boolean               @default(false)
+  LoanedItem         LoanedItems[]
+  FlagsOnItems       FlagsOnItemsByUsers[]
+  LoanedItemsHistory LoanedItemsHistory[]
+}
+
+model Items {
+  id                 String                @id @default(uuid())
+  name               String
+  description        String?
+  LoanedItem         LoanedItems[]
+  FlagsOnItems       FlagsOnItemsByUsers[]
+  LoanedItemsHistory LoanedItemsHistory[]
+}
+
+model LoanedItems {
+  loanId     String    @id @default(uuid())
+  user       Users     @relation(fields: [userId], references: [id])
+  userId     String
+  item       Items     @relation(fields: [itemId], references: [id])
+  itemId     String
+  loanedDate DateTime  @default(now())
+  location   Locations @relation(fields: [locationId], references: [id])
+  locationId String
+
+  @@unique([itemId])
+}
+
+model LoanedItemsHistory {
+  loanId       String    @id @default(uuid())
+  user         Users     @relation(fields: [userId], references: [id])
+  userId       String
+  item         Items     @relation(fields: [itemId], references: [id])
+  itemId       String
+  loanedDate   DateTime
+  returnedDate DateTime  @default(now())
+  location     Locations @relation(fields: [locationId], references: [id])
+  locationId   String
+}
+
+model Locations {
+  id                 String               @id @default(uuid())
+  name               String
+  LoanedItem         LoanedItems[]
+  LoanedItemsHistory LoanedItemsHistory[]
+}
+
+model FlagsOnItemsByUsers {
+  item        Items    @relation(fields: [itemId], references: [id])
+  itemId      String
+  flag        Flags    @relation(fields: [flagId], references: [id])
+  flagId      Int
+  flaggedBy   Users    @relation(fields: [userId], references: [id])
+  userId      String
+  flaggedDate DateTime @default(now())
+
+  @@id([itemId, flagId])
+}
+
+model Flags {
+  id           Int                   @id @default(autoincrement())
+  name         String
+  description  String?
+  FlagsOnItems FlagsOnItemsByUsers[]
+}
