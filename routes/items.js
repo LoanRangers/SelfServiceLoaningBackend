@@ -15,9 +15,10 @@ router.use(jsonParser);
  *       500:
  *         description: Internal server error
  */
-router.get('/', async (req, res) => {
-  const items = await prisma.items.findMany();
-  res.send(items);
+router.get('/:id?', async (req, res) => {
+  const params = req.params;
+  let response = await readItems(params.id);
+  res.send(response);
 });
 
 /**
@@ -33,16 +34,25 @@ router.get('/', async (req, res) => {
  */
 router.post('/', jsonParser, async (req, res) => {
   const body = req.body;
-  const item = await prisma.items.create({
-    data: {
-      name: body.name,
-    },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
-  res.send(item);
+  let response = await createItem(body.itemName, body.itemDescription);
+  res.send(response);
+});
+
+/**
+ * @swagger
+ * /items:
+ *   delete:
+ *     description: Deletes item
+ *     responses:
+ *       200:
+ *         description: Item deleted successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.delete('/:id', async (req, res) => {
+  const params = req.params;
+  let response = await deleteItem(params.id);
+  res.send(response);
 });
 
 /**
@@ -56,9 +66,10 @@ router.post('/', jsonParser, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/loan', jsonParser, async (req, res) => {
+router.post('/loan/:itemId', jsonParser, async (req, res) => {
+  const params = req.params;
   const body = req.body;
-  let response = await loanItem(body.userId, body.itemId);
+  let response = await loanItem(body.userId, params.itemId);
   res.send(response);
 });
 
@@ -73,12 +84,57 @@ router.post('/loan', jsonParser, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/return', jsonParser, async (req, res) => {
+router.post('/return/:itemId', jsonParser, async (req, res) => {
+  const params = req.params;
   const body = req.body;
-  let response = await returnItem(body.itemId);
+  let response = await returnItem(params.itemId);
   //let response = await returnItem('ad7bc101-276a-43d5-a907-3b8e0be16022');
   res.send(response);
 });
+
+async function readItems(itemId = '') {
+  let response;
+  try {
+    response = itemId ? await prisma.items.findFirst({ where: { id: itemId } }) : await prisma.items.findMany();
+  } catch (e) {
+    response = e;
+  }
+  return response;
+}
+
+async function createItem(itemName, itemDescription = '') {
+  let response;
+  try {
+    response = await prisma.items.create({
+      data: {
+        name: itemName,
+        description: itemDescription,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+    });
+  } catch (e) {
+    response = e;
+  }
+  return response;
+}
+
+async function deleteItem(itemId) {
+  let response;
+  try {
+    response = await prisma.items.delete({
+      where: {
+        itemId: itemId,
+      },
+    });
+  } catch (e) {
+    response = e;
+  }
+  return response;
+}
 
 async function loanItem(userId, itemId) {
   let response;
@@ -99,7 +155,7 @@ async function loanItem(userId, itemId) {
   return response;
 }
 
-async function returnItem(itemId) {
+async function returnItem(itemId, locationId) {
   let response;
   try {
     let row = await prisma.loanedItems.findFirst({
@@ -109,7 +165,6 @@ async function returnItem(itemId) {
       select: {
         userId: true,
         loanedDate: true,
-        locationId: true,
       },
     });
     response = await prisma.$transaction([
@@ -117,16 +172,13 @@ async function returnItem(itemId) {
         where: {
           itemId: itemId,
         },
-        select: {
-          loanId: true,
-        },
       }),
       prisma.loanedItemsHistory.create({
         data: {
           userId: row.userId,
           itemId: itemId,
           loanedDate: row.loanedDate,
-          locationId: row.locationId,
+          locationId: locationId,
         },
       }),
     ]);
