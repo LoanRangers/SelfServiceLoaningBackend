@@ -14,33 +14,35 @@ datasource db {
 }
 
 model Users {
-  id                 String                @id @default(uuid())
+  id                 String               @id @default(uuid())
   ssoId              String?
   ssoName            String?
-  isAdmin            Boolean               @default(false)
+  isAdmin            Boolean              @default(false)
   LoanedItem         LoanedItems[]
-  FlagsOnItems       FlagsOnItemsByUsers[]
   LoanedItemsHistory LoanedItemsHistory[]
 }
 
 model Items {
-  id                 String                @id @default(uuid())
+  id                 String               @id @default(uuid())
   name               String
   description        String?
+  category           Categories?          @relation(fields: [categoryName], references: [name])
+  categoryName       String
+  markers            Json?
   LoanedItem         LoanedItems[]
-  FlagsOnItems       FlagsOnItemsByUsers[]
   LoanedItemsHistory LoanedItemsHistory[]
+  FlagsOnItems       FlagsOnItems[]
 }
 
 model LoanedItems {
-  loanId     String    @id @default(uuid())
-  user       Users     @relation(fields: [userId], references: [id])
-  userId     String
-  item       Items     @relation(fields: [itemId], references: [id])
-  itemId     String
-  loanedDate DateTime  @default(now())
-  location   Locations @relation(fields: [locationId], references: [id])
-  locationId String
+  loanId       String    @id @default(uuid())
+  user         Users     @relation(fields: [userId], references: [id])
+  userId       String
+  item         Items     @relation(fields: [itemId], references: [id])
+  itemId       String
+  loanedDate   DateTime  @default(now())
+  location     Locations @relation(fields: [locationName], references: [name])
+  locationName String
 
   @@unique([itemId])
 }
@@ -53,32 +55,31 @@ model LoanedItemsHistory {
   itemId       String
   loanedDate   DateTime
   returnedDate DateTime  @default(now())
-  location     Locations @relation(fields: [locationId], references: [id])
-  locationId   String
+  location     Locations @relation(fields: [locationName], references: [name])
+  locationName String
 }
 
 model Locations {
-  id                 String               @id @default(uuid())
-  name               String
+  name               String               @id
   LoanedItem         LoanedItems[]
   LoanedItemsHistory LoanedItemsHistory[]
 }
 
-model FlagsOnItemsByUsers {
-  item        Items    @relation(fields: [itemId], references: [id])
-  itemId      String
-  flag        Flags    @relation(fields: [flagId], references: [id])
-  flagId      Int
-  flaggedBy   Users    @relation(fields: [userId], references: [id])
-  userId      String
-  flaggedDate DateTime @default(now())
+model Categories {
+  name  String  @id
+  Items Items[]
+}
 
-  @@id([itemId, flagId])
+model FlagsOnItems {
+  flagId   String @id @default(uuid())
+  item     Items  @relation(fields: [itemId], references: [id])
+  itemId   String
+  flag     Flags  @relation(fields: [flagName], references: [name])
+  flagName String
 }
 
 model Flags {
-  id           Int                   @id @default(autoincrement())
-  name         String
-  description  String?
-  FlagsOnItems FlagsOnItemsByUsers[]
+  name         String         @id @unique
+  description  String
+  FlagsOnItems FlagsOnItems[]
 }
