@@ -2,11 +2,14 @@ import 'dotenv/config';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
+import cors from "cors";
+import cookieParser from "cookie-parser";
 
 import users from './routes/users.js';
 import items from './routes/items.js';
 import flags from './routes/flags.js';
 import locations from './routes/locations.js';
+import auth from './routes/auth.js';
 
 const options = {
   definition: {
@@ -21,8 +24,11 @@ const options = {
 const swaggerSpec = swaggerJsdoc(options);
 
 const app = express();
+app.use(cors({ origin: "http://localhost:5173", credentials: true}))
+app.use(cookieParser());
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/auth', auth);
 app.use('/users', users);
 app.use('/items', items);
 app.use('/flags', flags);
