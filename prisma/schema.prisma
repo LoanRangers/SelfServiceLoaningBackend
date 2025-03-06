@@ -14,8 +14,7 @@ datasource db {
 }
 
 model Users {
-  id                 String               @id @default(uuid())
-  ssoId              String?
+  ssoId              String               @id
   ssoName            String?
   isAdmin            Boolean              @default(false)
   LoanedItem         LoanedItems[]
@@ -27,7 +26,7 @@ model Items {
   name               String
   description        String?
   category           Categories?          @relation(fields: [categoryName], references: [name])
-  categoryName       String
+  categoryName       String?
   markers            Json?
   LoanedItem         LoanedItems[]
   LoanedItemsHistory LoanedItemsHistory[]
@@ -36,7 +35,7 @@ model Items {
 
 model LoanedItems {
   loanId       String    @id @default(uuid())
-  user         Users     @relation(fields: [userId], references: [id])
+  user         Users     @relation(fields: [userId], references: [ssoId])
   userId       String
   item         Items     @relation(fields: [itemId], references: [id])
   itemId       String
@@ -49,7 +48,7 @@ model LoanedItems {
 
 model LoanedItemsHistory {
   loanId       String    @id @default(uuid())
-  user         Users     @relation(fields: [userId], references: [id])
+  user         Users     @relation(fields: [userId], references: [ssoId])
   userId       String
   item         Items     @relation(fields: [itemId], references: [id])
   itemId       String
@@ -60,7 +59,7 @@ model LoanedItemsHistory {
 }
 
 model Locations {
-  name               String               @id
+  name               String               @id @unique
   LoanedItem         LoanedItems[]
   LoanedItemsHistory LoanedItemsHistory[]
 }

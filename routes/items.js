@@ -15,9 +15,24 @@ router.use(jsonParser);
  *       500:
  *         description: Internal server error
  */
-router.get('/:id?', async (req, res) => {
+router.get('/', async (req, res) => {
+  let response = await readItems();
+  res.send(response);
+});
+
+router.get('/id/:id?', async (req, res) => {
   const params = req.params;
   let response = await readItems(params.id);
+  res.send(response);
+});
+
+router.get('/available', async (req, res) => {
+  let response = await readAvailableItems();
+  res.send(response);
+});
+
+router.get('/unavailable', async (req, res) => {
+  let response = await readUnavailableItems();
   res.send(response);
 });
 
@@ -87,8 +102,7 @@ router.post('/loan/:itemId', jsonParser, async (req, res) => {
 router.post('/return/:itemId', jsonParser, async (req, res) => {
   const params = req.params;
   const body = req.body;
-  let response = await returnItem(params.itemId);
-  //let response = await returnItem('ad7bc101-276a-43d5-a907-3b8e0be16022');
+  let response = await returnItem(params.itemId, body.locationName);
   res.send(response);
 });
 
@@ -96,6 +110,32 @@ async function readItems(itemId = '') {
   let response;
   try {
     response = itemId ? await prisma.items.findFirst({ where: { id: itemId } }) : await prisma.items.findMany();
+  } catch (e) {
+    response = e;
+  }
+  return response;
+}
+
+async function readAvailableItems() {
+  let response;
+  try {
+    response =
+      await prisma.$queryRaw`SELECT "Items"."id","Items"."description","Items"."name" FROM "Items" LEFT JOIN "LoanedItems" ON "Items"."id"="LoanedItems"."itemId" WHERE "LoanedItems"."itemId" IS NULL`;
+  } catch (e) {
+    response = e;
+  }
+  console.log(response);
+  return response;
+}
+
+async function readUnavailableItems() {
+  let response;
+  try {
+    response = await prisma.loanedItems.findMany({
+      include: {
+        item: true,
+      },
+    });
   } catch (e) {
     response = e;
   }
@@ -143,7 +183,7 @@ async function loanItem(userId, itemId) {
       data: {
         userId: userId,
         itemId: itemId,
-        locationId: '285aa0e8-5e37-4883-8d05-6f064288b89f',
+        locationName: 'With User',
       },
       select: {
         loanId: true,
@@ -155,7 +195,7 @@ async function loanItem(userId, itemId) {
   return response;
 }
 
-async function returnItem(itemId, locationId) {
+async function returnItem(itemId, locationName) {
   let response;
   try {
     let row = await prisma.loanedItems.findFirst({
@@ -178,7 +218,7 @@ async function returnItem(itemId, locationId) {
           userId: row.userId,
           itemId: itemId,
           loanedDate: row.loanedDate,
-          locationId: locationId,
+          locationName: locationName,
         },
       }),
     ]);
