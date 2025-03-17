@@ -24,6 +24,7 @@ model Users {
 model Items {
   id                 String               @id @default(uuid())
   name               String
+  isAvailable        Boolean              @default(true)
   description        String?
   category           Categories?          @relation(fields: [categoryName], references: [name])
   categoryName       String?
