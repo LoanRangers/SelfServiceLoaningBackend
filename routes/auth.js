@@ -40,12 +40,13 @@ router.get('/callback', async (req, res) => {
     });
 
     const user = userInfoResponse.data;
+    console.log(user);
 
-    let dbUser = await prisma.users.findUnique({ where: { ssoId: user.sub } });
+    let dbUser = await prisma.users.findUnique({ where: { ssoId: user.nickname } });
 
     if (!dbUser) {
       dbUser = await prisma.users.create({
-        data: { ssoId: user.sub, ssoName: user.name },
+        data: { ssoId: user.nickname, ssoName: user.name },
       });
     }
 
