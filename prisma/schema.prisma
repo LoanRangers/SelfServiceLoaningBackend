@@ -19,6 +19,7 @@ model Users {
   isAdmin            Boolean              @default(false)
   LoanedItem         LoanedItems[]
   LoanedItemsHistory LoanedItemsHistory[]
+  AuditLogs          AuditLogs[]
 }
 
 model Items {
@@ -84,4 +85,30 @@ model Flags {
   name         String         @id @unique
   description  String
   FlagsOnItems FlagsOnItems[]
+}
+
+enum CRUD {
+  CREATE
+  READ
+  UPDATE
+  DELETE
+}
+
+enum Table {
+  Items
+  LoanedItem
+  LoanedItemsHistory
+  Locations
+  Categories
+  FlagsOnItems
+  Flags
+}
+
+model AuditLogs {
+  LogId  String @id @default(uuid())
+  User   Users  @relation(fields: [ssoId], references: [ssoId])
+  ssoId  String
+  Action CRUD
+  Table  Table
+  Info   Json
 }
