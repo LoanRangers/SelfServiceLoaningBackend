@@ -25,10 +25,12 @@ model Items {
   id                 String               @id @default(uuid())
   name               String
   isAvailable        Boolean              @default(true)
+  currentLocation    String               @default("")
   description        String?
-  category           Categories?          @relation(fields: [categoryName], references: [name])
-  categoryName       String?
+  category           Categories           @relation(fields: [categoryName], references: [name])
+  categoryName       String
   markers            Json?
+  manufacturedYear   Int?
   LoanedItem         LoanedItems[]
   LoanedItemsHistory LoanedItemsHistory[]
   FlagsOnItems       FlagsOnItems[]
@@ -66,7 +68,7 @@ model Locations {
 }
 
 model Categories {
-  name  String  @id
+  name  String  @id @unique
   Items Items[]
 }
 

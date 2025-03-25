@@ -49,7 +49,8 @@ router.get('/unavailable', async (req, res) => {
  */
 router.post('/', jsonParser, async (req, res) => {
   const body = req.body;
-  let response = await createItem(body.itemName, body.itemDescription);
+  console.log(body);
+  let response = await createItem(body.name, body.description, body.category, body.location, body.manufacturedYear);
   res.send(response);
 });
 
@@ -106,12 +107,19 @@ router.post('/return/:itemId', jsonParser, async (req, res) => {
   res.send(response);
 });
 
+router.post('/loanhistory', jsonParser, async (req, res) => {
+  const body = req.body;
+  let response = await loanHistory(body.user, body.page);
+  res.send(response);
+});
+
 async function readItems(itemId = '') {
   let response;
   try {
     response = itemId ? await prisma.items.findFirst({ where: { id: itemId } }) : await prisma.items.findMany();
   } catch (e) {
     response = e;
+    console.log(e);
   }
   return response;
 }
@@ -123,6 +131,7 @@ async function readAvailableItems() {
       await prisma.$queryRaw`SELECT "Items"."id","Items"."description","Items"."name" FROM "Items" LEFT JOIN "LoanedItems" ON "Items"."id"="LoanedItems"."itemId" WHERE "LoanedItems"."itemId" IS NULL`;
   } catch (e) {
     response = e;
+    console.log(e);
   }
   console.log(response);
   return response;
@@ -138,17 +147,29 @@ async function readUnavailableItems() {
     });
   } catch (e) {
     response = e;
+    console.log(e);
   }
   return response;
 }
 
-async function createItem(itemName, itemDescription = '') {
+async function createItem(itemName, itemDescription, category, location, manufacturedYear) {
   let response;
   try {
+    let existingCategory = await prisma.categories.findFirst({ where: { name: category } });
+    if (!existingCategory) {
+      await prisma.categories.create({ data: { name: category } });
+    }
+    let existingLocation = await prisma.locations.findFirst({ where: { name: location } });
+    if (!existingLocation) {
+      await prisma.locations.create({ data: { name: location } });
+    }
     response = await prisma.items.create({
       data: {
         name: itemName,
         description: itemDescription,
+        categoryName: category,
+        currentLocation: location,
+        manufacturedYear: parseInt(manufacturedYear),
       },
       select: {
         id: true,
@@ -158,6 +179,7 @@ async function createItem(itemName, itemDescription = '') {
     });
   } catch (e) {
     response = e;
+    console.log(e);
   }
   return response;
 }
@@ -172,6 +194,7 @@ async function deleteItem(itemId) {
     });
   } catch (e) {
     response = e;
+    console.log(e);
   }
   return response;
 }
@@ -191,6 +214,7 @@ async function loanItem(userId, itemId) {
     });
   } catch (e) {
     response = e;
+    console.log(e);
   }
   return response;
 }
@@ -224,6 +248,28 @@ async function returnItem(itemId, locationName) {
     ]);
   } catch (e) {
     response = e;
+    console.log(e);
+  }
+  return response;
+}
+
+async function loanHistory(userId, pageNumber) {
+  let response;
+  try {
+    response = await prisma.loanedItemsHistory.findMany({
+      skip: (pageNumber - 1) * 20,
+      take: pageNumber * 20,
+      where: { userId: userId },
+      include: { item: true },
+      omit: {
+        itemId: true,
+        loanId: true,
+        userId: true,
+      },
+    });
+  } catch (e) {
+    response = e;
+    console.log(e);
   }
   return response;
 }
