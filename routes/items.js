@@ -109,7 +109,7 @@ router.post('/return/:itemId', jsonParser, async (req, res) => {
 
 router.post('/loanhistory', jsonParser, async (req, res) => {
   const body = req.body;
-  let response = await loanHistory(body.user, body.page);
+  let response = await loanHistory(body.user, body.page, body.maxItems);
   res.send(response);
 });
 
@@ -212,6 +212,15 @@ async function loanItem(userId, itemId) {
         loanId: true,
       },
     });
+    await prisma.items.update({
+      data: {
+        isAvailable: false,
+        currentLocation: 'With User',
+      },
+      where: {
+        id: itemId,
+      },
+    });
   } catch (e) {
     response = e;
     console.log(e);
@@ -245,6 +254,15 @@ async function returnItem(itemId, locationName) {
           locationName: locationName,
         },
       }),
+      prisma.items.update({
+        data: {
+          isAvailable: true,
+          currentLocation: locationName,
+        },
+        where: {
+          id: itemId,
+        },
+      }),
     ]);
   } catch (e) {
     response = e;
@@ -253,12 +271,12 @@ async function returnItem(itemId, locationName) {
   return response;
 }
 
-async function loanHistory(userId, pageNumber) {
+async function loanHistory(userId, pageNumber, maxItems) {
   let response;
   try {
     response = await prisma.loanedItemsHistory.findMany({
-      skip: (pageNumber - 1) * 10,
-      take: 10,
+      skip: (pageNumber - 1) * maxItems,
+      take: maxItems,
       where: { userId: userId },
       include: { item: true },
       omit: {
