@@ -257,8 +257,8 @@ async function loanHistory(userId, pageNumber) {
   let response;
   try {
     response = await prisma.loanedItemsHistory.findMany({
-      skip: (pageNumber - 1) * 20,
-      take: pageNumber * 20,
+      skip: (pageNumber - 1) * 10,
+      take: 10,
       where: { userId: userId },
       include: { item: true },
       omit: {
