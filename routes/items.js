@@ -113,6 +113,23 @@ router.post('/loanhistory', jsonParser, async (req, res) => {
   res.send(response);
 });
 
+/**
+ * @swagger
+ * /items/return:
+ *   post:
+ *     description: Audit log
+ *     responses:
+ *       200:
+ *         description: Audit log retrieved successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/auditlog', jsonParser, async (req, res) => {
+  const body = req.body;
+  let response = await auditLog(body.user, body.page);
+  res.send(response);
+});
+
 async function readItems(itemId = '') {
   let response;
   try {
@@ -177,6 +194,16 @@ async function createItem(itemName, itemDescription, category, location, manufac
         description: true,
       },
     });
+
+    // Log the audit entry
+    await logAudit(null, 'CREATE_ITEM', null, {
+      itemId: response.id,
+      itemName: itemName,
+      itemDescription: itemDescription,
+      category: category,
+      location: location,
+      manufacturedYear: manufacturedYear,
+    });
   } catch (e) {
     response = e;
     console.log(e);
@@ -191,6 +218,13 @@ async function deleteItem(itemId) {
       where: {
         itemId: itemId,
       },
+    });
+
+    // Log the audit entry
+    await logAudit(null, 'DELETE_ITEM', null, {
+      itemId: itemId,
+      itemName: item?.name,
+      itemDescription: item?.description,
     });
   } catch (e) {
     response = e;
@@ -264,6 +298,28 @@ async function returnItem(itemId, locationName) {
         },
       }),
     ]);
+  } catch (e) {
+    response = e;
+    console.log(e);
+  }
+  return response;
+}
+
+async function auditLog(userId, pageNumber) {
+  let response;
+  try {
+    response = await prisma.auditLog.findMany({
+      skip: (pageNumber - 1) * 10,
+      take: 10, 
+      where: { userId: userId },
+      select: {
+        LogId: true,
+        Action: true,
+        Table: true,
+        Details: true,
+        timestamp: true,
+      },
+    });
   } catch (e) {
     response = e;
     console.log(e);
