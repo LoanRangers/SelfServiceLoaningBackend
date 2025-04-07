@@ -10,6 +10,7 @@ import items from './routes/items.js';
 import flags from './routes/flags.js';
 import locations from './routes/locations.js';
 import auth from './routes/auth.js';
+import auditlog from './routes/auditlog.js';
 
 const options = {
   definition: {
@@ -33,6 +34,7 @@ app.use('/users', users);
 app.use('/items', items);
 app.use('/flags', flags);
 app.use('/locations', locations);
+app.use('/auditlog', auditlog);
 
 app.listen(process.env.APP_PORT, () =>
   console.log('App running at ' + process.env.APP_URL + ':' + process.env.APP_PORT)

@@ -109,7 +109,24 @@ router.post('/return/:itemId', jsonParser, async (req, res) => {
 
 router.post('/loanhistory', jsonParser, async (req, res) => {
   const body = req.body;
-  let response = await loanHistory(body.user, body.page);
+  let response = await loanHistory(body.user, body.page, body.maxItems);
+  res.send(response);
+});
+
+/**
+ * @swagger
+ * /items/return:
+ *   post:
+ *     description: Audit log
+ *     responses:
+ *       200:
+ *         description: Audit log retrieved successfully
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/auditlog', jsonParser, async (req, res) => {
+  const body = req.body;
+  let response = await auditLog(body.user, body.page);
   res.send(response);
 });
 
@@ -177,6 +194,16 @@ async function createItem(itemName, itemDescription, category, location, manufac
         description: true,
       },
     });
+
+    // Log the audit entry
+    await logAudit(null, 'CREATE_ITEM', null, {
+      itemId: response.id,
+      itemName: itemName,
+      itemDescription: itemDescription,
+      category: category,
+      location: location,
+      manufacturedYear: manufacturedYear,
+    });
   } catch (e) {
     response = e;
     console.log(e);
@@ -191,6 +218,13 @@ async function deleteItem(itemId) {
       where: {
         itemId: itemId,
       },
+    });
+
+    // Log the audit entry
+    await logAudit(null, 'DELETE_ITEM', null, {
+      itemId: itemId,
+      itemName: item?.name,
+      itemDescription: item?.description,
     });
   } catch (e) {
     response = e;
@@ -210,6 +244,15 @@ async function loanItem(userId, itemId) {
       },
       select: {
         loanId: true,
+      },
+    });
+    await prisma.items.update({
+      data: {
+        isAvailable: false,
+        currentLocation: 'With User',
+      },
+      where: {
+        id: itemId,
       },
     });
   } catch (e) {
@@ -245,6 +288,15 @@ async function returnItem(itemId, locationName) {
           locationName: locationName,
         },
       }),
+      prisma.items.update({
+        data: {
+          isAvailable: true,
+          currentLocation: locationName,
+        },
+        where: {
+          id: itemId,
+        },
+      }),
     ]);
   } catch (e) {
     response = e;
@@ -253,12 +305,34 @@ async function returnItem(itemId, locationName) {
   return response;
 }
 
-async function loanHistory(userId, pageNumber) {
+async function auditLog(userId, pageNumber) {
+  let response;
+  try {
+    response = await prisma.auditLog.findMany({
+      skip: (pageNumber - 1) * 10,
+      take: 10, 
+      where: { userId: userId },
+      select: {
+        LogId: true,
+        Action: true,
+        Table: true,
+        Details: true,
+        timestamp: true,
+      },
+    });
+  } catch (e) {
+    response = e;
+    console.log(e);
+  }
+  return response;
+}
+
+async function loanHistory(userId, pageNumber, maxItems) {
   let response;
   try {
     response = await prisma.loanedItemsHistory.findMany({
-      skip: (pageNumber - 1) * 10,
-      take: 10,
+      skip: (pageNumber - 1) * maxItems,
+      take: maxItems,
       where: { userId: userId },
       include: { item: true },
       omit: {

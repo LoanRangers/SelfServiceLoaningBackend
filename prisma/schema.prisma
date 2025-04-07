@@ -92,6 +92,13 @@ enum CRUD {
   READ
   UPDATE
   DELETE
+  LOGIN
+  LOGOUT
+  LOAN_DEVICE
+  RETURN_DEVICE
+  FLAG_DEVICE
+  SCAN_QR
+  FAILED_LOGIN
 }
 
 enum Table {
@@ -105,10 +112,11 @@ enum Table {
 }
 
 model AuditLogs {
-  LogId  String @id @default(uuid())
-  User   Users  @relation(fields: [ssoId], references: [ssoId])
-  ssoId  String
-  Action CRUD
-  Table  Table
-  Info   Json
+  LogId     String   @id @default(uuid())
+  User      Users    @relation(fields: [ssoId], references: [ssoId])
+  ssoId     String
+  Action    CRUD
+  Table     Table
+  Details   Json     // Stores specific information about the event
+  timestamp DateTime @default(now())
 }
