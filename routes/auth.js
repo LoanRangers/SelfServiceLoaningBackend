@@ -52,7 +52,7 @@ router.get('/callback', async (req, res) => {
 
     // Step 5: Set user session (or send JWT)
     res.cookie('auth_token', access_token, { httpOnly: true, secure: false });
-    res.redirect(`http://localhost:5173/`);
+    res.redirect(`https://localhost:5173/`);
   } catch (error) {
     console.error('GitLab OAuth error:', error.response?.data || error.message);
     res.status(500).json({ error: 'GitLab authentication failed' });
