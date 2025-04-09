@@ -8,7 +8,7 @@ router.use(jsonParser);
 const GITLAB_BASE_URL = 'https://gitlab-ext.utu.fi';
 const CLIENT_ID = process.env.GITLAB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITLAB_CLIENT_SECRET;
-const REDIRECT_URI = 'http://localhost:3000/auth/callback';
+const REDIRECT_URI = process.env.APP_URL + ':' + process.env.APP_PORT + '/auth/callback';
 
 router.get('/gitlab', (req, res) => {
   const gitlabAuthUrl = `${GITLAB_BASE_URL}/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=openid%20email%20profile`;
@@ -51,8 +51,8 @@ router.get('/callback', async (req, res) => {
     }
 
     // Step 5: Set user session (or send JWT)
-    res.cookie('auth_token', access_token, { httpOnly: true, secure: false });
-    res.redirect(`https://localhost:5173/`);
+    res.cookie('auth_token', access_token, { httpOnly: false, secure: true });
+    res.redirect(process.env.FRONTEND_URL + ':' + process.env.FRONTEND_PORT + '/');
   } catch (error) {
     console.error('GitLab OAuth error:', error.response?.data || error.message);
     res.status(500).json({ error: 'GitLab authentication failed' });

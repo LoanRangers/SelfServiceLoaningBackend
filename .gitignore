@@ -1,2 +1,10 @@
 node_modules/
 .env
+*.crt
+*.csr
+*.key
+*.pem
+*.pfx
+*.p12
+*.jks
+*.jks
