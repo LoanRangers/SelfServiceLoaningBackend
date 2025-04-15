@@ -64,6 +64,7 @@ model LoanedItemsHistory {
 
 model Locations {
   name               String               @id @unique
+  description        String?
   LoanedItem         LoanedItems[]
   LoanedItemsHistory LoanedItemsHistory[]
 }
@@ -119,4 +120,11 @@ model AuditLogs {
   Table     Table
   Details   Json     // Stores specific information about the event
   timestamp DateTime @default(now())
+}
+
+model QRCodes {
+  id        String   @id @default(uuid())
+  guid      String   @unique                      // Unique GUID for the QR code
+  name      String                                // Name of the QR code
+  createdAt DateTime @default(now())              // Timestamp for creation
 }

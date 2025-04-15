@@ -30,19 +30,53 @@ router.get('/', async (req, res) => {
  * /auditLog:
  *   post:
  *     description: Creates a new audit log entry
+ *     parameters:
+ *       - in: body
+ *         name: auditLog
+ *         description: The audit log details.
+ *         schema:
+ *           type: object
+ *           required:
+ *             - ssoId
+ *             - action
+ *             - table
+ *             - details
+ *           properties:
+ *             ssoId:
+ *               type: string
+ *             action:
+ *               type: string
+ *               enum: [CREATE, READ, UPDATE, DELETE]
+ *             table:
+ *               type: string
+ *             details:
+ *               type: object
  *     responses:
  *       200:
  *         description: Audit log created successfully
+ *       400:
+ *         description: Missing required fields
  *       500:
  *         description: Internal server error
  */
 router.post('/', async (req, res) => {
-  const body = req.body;
+  const { ssoId, action, table, details } = req.body;
+
+  // Validate required fields
+  if (!ssoId || !action || !table || !details) {
+    return res.status(400).send({ error: 'Missing required fields: ssoId, action, table, or details' });
+  }
+
   try {
-    const auditLogs = await prisma.auditLog.create({
-      data: body,
+    const auditLog = await prisma.auditLogs.create({
+      data: {
+        ssoId,
+        Action: action,
+        Table: table,
+        Details: details,
+      },
     });
-    res.send(auditLogs);
+    res.status(200).send(auditLog);
   } catch (error) {
     console.error('Error creating audit log:', error);
     res.status(500).send({ error: 'Failed to create audit log' });
