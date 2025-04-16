@@ -15,11 +15,12 @@ router.use(jsonParser);
  *       500:
  *         description: Internal server error
  */
-router.get('/', async (req, res) => {
+router.post('/logs', jsonParser, async (req, res) => {
   try {
+    const body = req.body
     //const auditLogs = await prisma.auditLogs.findMany();
-    console.log(req.body)
-    const auditLogs = await auditLog(req.body.page)
+    const auditLogs = await auditLog(body.page)
+    console.log(auditLogs)
     res.send(auditLogs);
   } catch (error) {
     console.error('Error fetching audit logs:', error);
@@ -93,6 +94,7 @@ async function auditLog(pageNumber) {
       take: 10,
       select: {
         LogId: true,
+        ssoId: true,
         Action: true,
         Table: true,
         Details: true,
