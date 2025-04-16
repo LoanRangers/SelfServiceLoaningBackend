@@ -83,7 +83,7 @@ router.delete('/:id', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/loan/:itemId', jsonParser, authenticateJWT, async (req, res) => {
+router.post('/loan/:itemId', authenticateJWT, async (req, res) => {
   const params = req.params;
   const body = req.body;
   let response = await loanItem(body.userId, params.itemId);
