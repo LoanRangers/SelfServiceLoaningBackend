@@ -187,6 +187,7 @@ async function createItem(itemName, itemDescription, categoryName, location, man
         description: itemDescription,
         currentLocation: location,
         manufacturedYear: parseInt(manufacturedYear),
+        category: categoryName
       },
       select: {
         id: true,
@@ -194,8 +195,19 @@ async function createItem(itemName, itemDescription, categoryName, location, man
         description: true,
       },
     });
-
+    await prisma.auditLogs.create({
+      data: {
+        ssoId:userId,
+        Action:"CREATE_ITEM",
+        Table:"Items",
+        Details: {
+          name:itemName,
+          category:categoryNames
+        }
+      }
+    })
     // Log the audit entry
+    /*
     await prisma.auditLogs.create({
       data: {
         ssoId: 'system', // Replace with the actual user ID performing the action
@@ -210,6 +222,7 @@ async function createItem(itemName, itemDescription, categoryName, location, man
         },
       },
     });
+    */
   } catch (e) {
     console.error('Error in createItem:', e); // Log the error for debugging
     response = { error: e.message };
@@ -225,13 +238,23 @@ async function deleteItem(itemId) {
         itemId: itemId,
       },
     });
+    await prisma.auditLogs.create({
+      data: {
+        ssoId:userId,
+        Action:"DELETE_ITEM",
+        Table:"Items",
+        Details: {device:itemId}
+      }
+    })
 
     // Log the audit entry
+    /*
     await logAudit(null, 'DELETE_ITEM', null, {
       itemId: itemId,
       itemName: item?.name,
       itemDescription: item?.description,
     });
+    */
   } catch (e) {
     response = e;
     console.log(e);
@@ -261,6 +284,14 @@ async function loanItem(userId, itemId) {
         id: itemId,
       },
     });
+    await prisma.auditLogs.create({
+      data: {
+        ssoId:userId,
+        Action:"LOAN_DEVICE",
+        Table:"LoanedItem",
+        Details: {device:itemId}
+      }
+    })
   } catch (e) {
     response = e;
     console.log(e);
@@ -304,6 +335,14 @@ async function returnItem(itemId, locationName) {
         },
       }),
     ]);
+    await prisma.auditLogs.create({
+      data: {
+        ssoId:row.userId,
+        Action:"RETURN_DEVICE",
+        Table:"LoanedItem",
+        Details: {device:itemId}
+      }
+    })
   } catch (e) {
     response = e;
     console.log(e);
