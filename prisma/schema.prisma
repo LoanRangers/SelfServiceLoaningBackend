@@ -117,6 +117,6 @@ model AuditLogs {
   ssoId     String
   Action    CRUD
   Table     Table
-  Details   Json     // Stores specific information about the event
+  Details   Json // Stores specific information about the event
   timestamp DateTime @default(now())
 }

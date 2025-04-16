@@ -1,5 +1,6 @@
 import prisma from '../services/dbservice.js';
 import express from 'express';
+import authenticateJWT from '../middleware/auth.js';
 const jsonParser = express.json();
 const router = express.Router();
 router.use(jsonParser);
@@ -82,7 +83,7 @@ router.delete('/:id', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/loan/:itemId', jsonParser, async (req, res) => {
+router.post('/loan/:itemId', jsonParser, authenticateJWT, async (req, res) => {
   const params = req.params;
   const body = req.body;
   let response = await loanItem(body.userId, params.itemId);
@@ -100,7 +101,7 @@ router.post('/loan/:itemId', jsonParser, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/return/:itemId', jsonParser, async (req, res) => {
+router.post('/return/:itemId', jsonParser, authenticateJWT, async (req, res) => {
   const params = req.params;
   const body = req.body;
   let response = await returnItem(params.itemId, body.locationName);
@@ -310,7 +311,7 @@ async function auditLog(userId, pageNumber) {
   try {
     response = await prisma.auditLog.findMany({
       skip: (pageNumber - 1) * 10,
-      take: 10, 
+      take: 10,
       where: { userId: userId },
       select: {
         LogId: true,

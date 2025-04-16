@@ -1,9 +1,17 @@
 import prisma from '../services/dbservice.js';
 import express from 'express';
 import axios from 'axios';
+import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
+import cookieParser from 'cookie-parser';
+
+import jwt from 'jsonwebtoken';
+const { verify } = jwt;
+
 const jsonParser = express.json();
+
 const router = express.Router();
 router.use(jsonParser);
+router.use(cookieParser());
 
 const GITLAB_BASE_URL = 'https://gitlab-ext.utu.fi';
 const CLIENT_ID = process.env.GITLAB_CLIENT_ID;
@@ -40,9 +48,12 @@ router.get('/callback', async (req, res) => {
     });
 
     const user = userInfoResponse.data;
+    const appAccessToken = generateAccessToken(user);
+    const appRefreshToken = generateRefreshToken(user);
+
     console.log(user);
 
-    let dbUser = await prisma.users.findUnique({ where: { ssoId: user.nickname } });
+    const dbUser = await prisma.users.findUnique({ where: { ssoId: user.nickname } });
 
     if (!dbUser) {
       dbUser = await prisma.users.create({
@@ -50,8 +61,14 @@ router.get('/callback', async (req, res) => {
       });
     }
 
+    const tokens = {
+      OAuth: access_token,
+      appAccessToken: appAccessToken,
+      appRefreshToken: appRefreshToken,
+    };
+
     // Step 5: Set user session (or send JWT)
-    res.cookie('auth_token', access_token, { httpOnly: true, secure: false });
+    res.cookie('auth_tokens', tokens, { httpOnly: true, secure: false });
     res.redirect(`https://localhost:5173/`);
   } catch (error) {
     console.error('GitLab OAuth error:', error.response?.data || error.message);
@@ -59,8 +76,20 @@ router.get('/callback', async (req, res) => {
   }
 });
 
+router.post('/refresh-token', (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) return res.sendStatus(403);
+
+  verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    const newAccessToken = generateAccessToken({ id: user.id, username: user.username, role: user.role });
+    res.json({ accessToken: newAccessToken });
+  });
+});
+
 router.get('/me', async (req, res) => {
-  const token = req.cookies.auth_token;
+  const token = req.cookies.auth_tokens.OAuth;
+  console.log(req.cookies);
 
   if (!token) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -76,8 +105,8 @@ router.get('/me', async (req, res) => {
   }
 });
 
-router.post('/logout', (req, res) => {
-  res.clearCookie('auth_token', { httpOnly: true, secure: false });
+router.post('/logout', async (req, res) => {
+  res.clearCookie('auth_tokens', { httpOnly: true, secure: false });
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
