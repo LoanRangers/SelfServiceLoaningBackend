@@ -17,7 +17,9 @@ router.use(jsonParser);
  */
 router.get('/', async (req, res) => {
   try {
-    const auditLogs = await prisma.auditLogs.findMany();
+    //const auditLogs = await prisma.auditLogs.findMany();
+    console.log(req.body)
+    const auditLogs = await auditLog(req.body.page)
     res.send(auditLogs);
   } catch (error) {
     console.error('Error fetching audit logs:', error);
@@ -82,5 +84,26 @@ router.post('/', async (req, res) => {
     res.status(500).send({ error: 'Failed to create audit log' });
   }
 });
+
+async function auditLog(pageNumber) {
+  let response;
+  try {
+    response = await prisma.auditLogs.findMany({
+      skip: (pageNumber - 1) * 10,
+      take: 10,
+      select: {
+        LogId: true,
+        Action: true,
+        Table: true,
+        Details: true,
+        timestamp: true,
+      },
+    });
+  } catch (e) {
+    response = e;
+    console.log(e);
+  }
+  return response;
+}
 
 export default router;

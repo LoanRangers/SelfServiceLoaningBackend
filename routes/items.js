@@ -101,7 +101,7 @@ router.post('/loan/:itemId', authenticateJWT, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/return/:itemId', jsonParser, authenticateJWT, async (req, res) => {
+router.post('/return/:itemId', authenticateJWT, async (req, res) => {
   const params = req.params;
   const body = req.body;
   let response = await returnItem(params.itemId, body.locationName);
@@ -111,6 +111,12 @@ router.post('/return/:itemId', jsonParser, authenticateJWT, async (req, res) => 
 router.post('/loanhistory', jsonParser, async (req, res) => {
   const body = req.body;
   let response = await loanHistory(body.user, body.page, body.maxItems);
+  res.send(response);
+});
+
+router.post('/currentlyloaned', jsonParser, async (req, res) => {
+  const body = req.body;
+  let response = await currentlyLoaned(body.user, body.page, body.maxItems);
   res.send(response);
 });
 
@@ -376,6 +382,27 @@ async function loanHistory(userId, pageNumber, maxItems) {
   let response;
   try {
     response = await prisma.loanedItemsHistory.findMany({
+      skip: (pageNumber - 1) * maxItems,
+      take: maxItems,
+      where: { userId: userId },
+      include: { item: true },
+      omit: {
+        itemId: true,
+        loanId: true,
+        userId: true,
+      },
+    });
+  } catch (e) {
+    response = e;
+    console.log(e);
+  }
+  return response;
+}
+
+async function currentlyLoaned(userId, pageNumber, maxItems) {
+  let response;
+  try {
+    response = await prisma.loanedItems.findMany({
       skip: (pageNumber - 1) * maxItems,
       take: maxItems,
       where: { userId: userId },
