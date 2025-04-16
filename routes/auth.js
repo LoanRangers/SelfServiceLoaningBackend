@@ -88,8 +88,13 @@ router.post('/refresh-token', (req, res) => {
 });
 
 router.get('/me', async (req, res) => {
-  const token = req.cookies.auth_tokens.OAuth;
-  console.log(req.cookies);
+  let token
+  try{
+    token = req.cookies.auth_tokens.OAuth;
+    //console.log(req.cookies);
+  }catch(e){
+    console.log(e)
+  }
 
   if (!token) {
     return res.status(401).json({ error: 'Unauthorized' });
