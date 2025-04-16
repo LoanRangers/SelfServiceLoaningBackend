@@ -170,22 +170,21 @@ async function readUnavailableItems() {
   return response;
 }
 
-async function createItem(itemName, itemDescription, category, location, manufacturedYear) {
+async function createItem(itemName, itemDescription, categoryName, location, manufacturedYear) {
   let response;
   try {
-    let existingCategory = await prisma.categories.findFirst({ where: { name: category } });
-    if (!existingCategory) {
-      await prisma.categories.create({ data: { name: category } });
-    }
-    let existingLocation = await prisma.locations.findFirst({ where: { name: location } });
-    if (!existingLocation) {
-      await prisma.locations.create({ data: { name: location } });
-    }
+    // Ensure the location exists or create it
+    let existingLocation = await prisma.locations.upsert({
+      where: { name: location },
+      update: {}, // If it exists, do nothing
+      create: { name: location }, // If it doesn't exist, create it
+    });
+
+    // Create the item without referencing the category
     response = await prisma.items.create({
       data: {
         name: itemName,
         description: itemDescription,
-        categoryName: category,
         currentLocation: location,
         manufacturedYear: parseInt(manufacturedYear),
       },
@@ -197,17 +196,23 @@ async function createItem(itemName, itemDescription, category, location, manufac
     });
 
     // Log the audit entry
-    await logAudit(null, 'CREATE_ITEM', null, {
-      itemId: response.id,
-      itemName: itemName,
-      itemDescription: itemDescription,
-      category: category,
-      location: location,
-      manufacturedYear: manufacturedYear,
+    await prisma.auditLogs.create({
+      data: {
+        ssoId: 'system', // Replace with the actual user ID performing the action
+        Action: 'CREATE',
+        Table: 'Items',
+        Details: {
+          itemId: response.id,
+          itemName: itemName,
+          itemDescription: itemDescription,
+          location: location,
+          manufacturedYear: manufacturedYear,
+        },
+      },
     });
   } catch (e) {
-    response = e;
-    console.log(e);
+    console.error('Error in createItem:', e); // Log the error for debugging
+    response = { error: e.message };
   }
   return response;
 }
