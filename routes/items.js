@@ -1,9 +1,7 @@
 import prisma from '../services/dbservice.js';
 import express from 'express';
 import authenticateJWT from '../middleware/auth.js';
-const jsonParser = express.json();
 const router = express.Router();
-router.use(jsonParser);
 
 /**
  * @swagger
@@ -48,7 +46,7 @@ router.get('/unavailable', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/', jsonParser, async (req, res) => {
+router.post('/', authenticateJWT, async (req, res) => {
   const body = req.body;
   console.log(body);
   let response = await createItem(body.name, body.description, body.category, body.location, body.manufacturedYear);
@@ -66,7 +64,7 @@ router.post('/', jsonParser, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateJWT, async (req, res) => {
   const params = req.params;
   let response = await deleteItem(params.id);
   res.send(response);
@@ -85,8 +83,7 @@ router.delete('/:id', async (req, res) => {
  */
 router.post('/loan/:itemId', authenticateJWT, async (req, res) => {
   const params = req.params;
-  const body = req.body;
-  let response = await loanItem(body.userId, params.itemId);
+  let response = await loanItem(req.user, [params.itemId]);
   res.send(response);
 });
 
@@ -104,19 +101,19 @@ router.post('/loan/:itemId', authenticateJWT, async (req, res) => {
 router.post('/return/:itemId', authenticateJWT, async (req, res) => {
   const params = req.params;
   const body = req.body;
-  let response = await returnItem(params.itemId, body.locationName);
+  let response = await returnItem(req.user, params.itemId, body.locationName);
   res.send(response);
 });
 
-router.post('/loanhistory', jsonParser, async (req, res) => {
+router.post('/loanhistory', authenticateJWT, async (req, res) => {
   const body = req.body;
-  let response = await loanHistory(body.user, body.page, body.maxItems);
+  let response = await loanHistory(req.user, body.page, body.maxItems);
   res.send(response);
 });
 
-router.post('/currentlyloaned', jsonParser, async (req, res) => {
+router.post('/currentlyloaned', authenticateJWT, async (req, res) => {
   const body = req.body;
-  let response = await currentlyLoaned(body.user, body.page, body.maxItems);
+  let response = await currentlyLoaned(req.user, body.page, body.maxItems);
   res.send(response);
 });
 
@@ -131,7 +128,7 @@ router.post('/currentlyloaned', jsonParser, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/auditlog', jsonParser, async (req, res) => {
+router.post('/auditlog', async (req, res) => {
   const body = req.body;
   let response = await auditLog(body.user, body.page);
   res.send(response);
@@ -180,7 +177,7 @@ async function createItem(itemName, itemDescription, categoryName, location, man
   let response;
   try {
     // Ensure the location exists or create it
-    let existingLocation = await prisma.locations.upsert({
+    await prisma.locations.upsert({
       where: { name: location },
       update: {}, // If it exists, do nothing
       create: { name: location }, // If it doesn't exist, create it
@@ -193,7 +190,7 @@ async function createItem(itemName, itemDescription, categoryName, location, man
         description: itemDescription,
         currentLocation: location,
         manufacturedYear: parseInt(manufacturedYear),
-        category: categoryName
+        category: categoryName,
       },
       select: {
         id: true,
@@ -203,15 +200,15 @@ async function createItem(itemName, itemDescription, categoryName, location, man
     });
     await prisma.auditLogs.create({
       data: {
-        ssoId:userId,
-        Action:"CREATE_ITEM",
-        Table:"Items",
+        ssoId: userId,
+        Action: 'CREATE_ITEM',
+        Table: 'Items',
         Details: {
-          name:itemName,
-          category:categoryNames
-        }
-      }
-    })
+          name: itemName,
+          category: categoryNames,
+        },
+      },
+    });
     // Log the audit entry
     /*
     await prisma.auditLogs.create({
@@ -246,12 +243,12 @@ async function deleteItem(itemId) {
     });
     await prisma.auditLogs.create({
       data: {
-        ssoId:userId,
-        Action:"DELETE_ITEM",
-        Table:"Items",
-        Details: {device:itemId}
-      }
-    })
+        ssoId: userId,
+        Action: 'DELETE_ITEM',
+        Table: 'Items',
+        Details: { device: itemId },
+      },
+    });
 
     // Log the audit entry
     /*
@@ -268,36 +265,38 @@ async function deleteItem(itemId) {
   return response;
 }
 
-async function loanItem(userId, itemId) {
+async function loanItem(userId, items) {
   let response;
   try {
-    response = await prisma.loanedItems.create({
-      data: {
-        userId: userId,
-        itemId: itemId,
-        locationName: 'With User',
-      },
-      select: {
-        loanId: true,
-      },
+    items.map(async (itemId) => {
+      response = await prisma.loanedItems.create({
+        data: {
+          userId: userId,
+          itemId: itemId,
+          locationName: 'With User',
+        },
+        select: {
+          loanId: true,
+        },
+      });
+      await prisma.items.update({
+        data: {
+          isAvailable: false,
+          currentLocation: 'With User',
+        },
+        where: {
+          id: itemId,
+        },
+      });
+      await prisma.auditLogs.create({
+        data: {
+          ssoId: userId,
+          Action: 'LOAN_DEVICE',
+          Table: 'LoanedItem',
+          Details: { device: itemId },
+        },
+      });
     });
-    await prisma.items.update({
-      data: {
-        isAvailable: false,
-        currentLocation: 'With User',
-      },
-      where: {
-        id: itemId,
-      },
-    });
-    await prisma.auditLogs.create({
-      data: {
-        ssoId:userId,
-        Action:"LOAN_DEVICE",
-        Table:"LoanedItem",
-        Details: {device:itemId}
-      }
-    })
   } catch (e) {
     response = e;
     console.log(e);
@@ -305,7 +304,7 @@ async function loanItem(userId, itemId) {
   return response;
 }
 
-async function returnItem(itemId, locationName) {
+async function returnItem(userId, itemId, locationName) {
   let response;
   try {
     let row = await prisma.loanedItems.findFirst({
@@ -313,7 +312,6 @@ async function returnItem(itemId, locationName) {
         itemId: itemId,
       },
       select: {
-        userId: true,
         loanedDate: true,
       },
     });
@@ -325,7 +323,7 @@ async function returnItem(itemId, locationName) {
       }),
       prisma.loanedItemsHistory.create({
         data: {
-          userId: row.userId,
+          userId: userId,
           itemId: itemId,
           loanedDate: row.loanedDate,
           locationName: locationName,
@@ -343,12 +341,12 @@ async function returnItem(itemId, locationName) {
     ]);
     await prisma.auditLogs.create({
       data: {
-        ssoId:row.userId,
-        Action:"RETURN_DEVICE",
-        Table:"LoanedItem",
-        Details: {device:itemId}
-      }
-    })
+        ssoId: userId,
+        Action: 'RETURN_DEVICE',
+        Table: 'LoanedItem',
+        Details: { device: itemId },
+      },
+    });
   } catch (e) {
     response = e;
     console.log(e);

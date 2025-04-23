@@ -1,8 +1,7 @@
 import prisma from '../services/dbservice.js';
 import express from 'express';
-const jsonParser = express.json();
+import authenticateJWT from '../middleware/auth.js';
 const router = express.Router();
-router.use(jsonParser);
 
 /**
  * @swagger
@@ -20,7 +19,7 @@ router.get('/', async (req, res) => {
   res.send(flags);
 });
 
-router.post('/', jsonParser, async (req, res) => {
+router.post('/', authenticateJWT, async (req, res) => {
   const flag = await prisma.flags.create({
     data: {},
     select: {

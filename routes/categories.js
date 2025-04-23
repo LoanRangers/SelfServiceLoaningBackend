@@ -1,8 +1,7 @@
 import prisma from '../services/dbservice.js';
 import express from 'express';
-const jsonParser = express.json();
+import authenticateJWT from '../middleware/auth.js';
 const router = express.Router();
-router.use(jsonParser);
 
 /**
  * @swagger
@@ -49,7 +48,7 @@ router.get('/', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateJWT, async (req, res) => {
   let name;
 
   // Check if the request body is JSON or plain text

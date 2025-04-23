@@ -26,15 +26,16 @@ const options = {
   apis: ['./index.js', './routes/*'],
 };
 const swaggerSpec = swaggerJsdoc(options);
-
+const jsonParser = express.json();
 const app = express();
 app.use(cors({ origin: process.env.FRONTEND_URL + ':' + process.env.FRONTEND_PORT, credentials: true }));
 app.use(cookieParser());
+app.use(jsonParser);
 
 const appOptions = {
   key: fs.readFileSync('backend-key.pem'),
   cert: fs.readFileSync('backend.pem'),
-}
+};
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.use('/auth', auth);

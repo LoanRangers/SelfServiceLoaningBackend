@@ -1,8 +1,7 @@
 import prisma from '../services/dbservice.js';
 import express from 'express';
-const jsonParser = express.json();
+import authenticateJWT from '../middleware/auth.js';
 const router = express.Router();
-router.use(jsonParser);
 
 /**
  * @swagger
@@ -56,16 +55,16 @@ router.get('/', async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/', async (req, res) => {
+router.post('/', authenticateJWT, async (req, res) => {
   const qrCodes = req.body;
 
-  if (!Array.isArray(qrCodes) || qrCodes.some(qr => !qr.guid || !qr.name)) {
+  if (!Array.isArray(qrCodes) || qrCodes.some((qr) => !qr.guid || !qr.name)) {
     return res.status(400).send({ error: 'Invalid request body. Each QR code must have a guid and name.' });
   }
 
   try {
     const createdQRCodes = await prisma.qRCodes.createMany({
-      data: qrCodes.map(qr => ({
+      data: qrCodes.map((qr) => ({
         guid: qr.guid,
         name: qr.name,
       })),
