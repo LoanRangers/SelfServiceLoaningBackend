@@ -92,6 +92,9 @@ async function auditLog(pageNumber) {
     response = await prisma.auditLogs.findMany({
       skip: (pageNumber - 1) * 10,
       take: 10,
+      orderBy: {
+        timestamp: 'desc',
+      },
       select: {
         LogId: true,
         ssoId: true,
