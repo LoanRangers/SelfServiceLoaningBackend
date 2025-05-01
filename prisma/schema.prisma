@@ -123,8 +123,6 @@ model AuditLogs {
 }
 
 model QRCodes {
-  id        String   @id @default(uuid())
-  guid      String   @unique // Unique GUID for the QR code
-  name      String // Name of the QR code
+  id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) // Timestamp for creation
 }
