@@ -1,5 +1,5 @@
-import jsonwbtoken from 'jsonwebtoken';
-const { verify } = jsonwbtoken;
+import jsonwbetoken from 'jsonwebtoken';
+const { verify } = jsonwbetoken;
 
 const authenticateJWT = (req, res, next) => {
   const authToken = req.cookies.auth_tokens.appAccessToken;
