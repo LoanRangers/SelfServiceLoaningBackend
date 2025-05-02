@@ -15,6 +15,8 @@ import categories from './routes/categories.js';
 import auth from './routes/auth.js';
 import auditlog from './routes/auditlog.js';
 import qrCodes from './routes/qrCodes.js';
+import comments from './routes/comments.js';
+
 const options = {
   definition: {
     openapi: '3.0.0',
@@ -46,6 +48,7 @@ app.use('/locations', locations);
 app.use('/categories', categories);
 app.use('/auditlog', auditlog);
 app.use('/qrCodes', qrCodes);
+app.use('/comments', comments);
 
 const server = https.createServer(appOptions, app);
 

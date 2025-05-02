@@ -15,8 +15,13 @@ const router = express.Router();
  *         description: Internal server error
  */
 router.get('/', async (req, res) => {
-  const locations = await prisma.locations.findMany();
-  res.send(locations);
+  try {
+    const locations = await prisma.locations.findMany();
+    res.status(200).send(locations);
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    res.status(500).send({ error: 'Failed to fetch locations' });
+  }
 });
 
 /**
@@ -37,8 +42,8 @@ router.get('/', async (req, res) => {
  *                 type: string
  *                 description: The name of the location to create.
  *               description:
- *                type: string
- *                description: The description of the location to create.
+ *                 type: string
+ *                 description: The description of the location to create.
  *     responses:
  *       200:
  *         description: Location created successfully
@@ -59,40 +64,49 @@ router.get('/', async (req, res) => {
  *         description: Internal server error
  */
 router.post('/', authenticateJWT, async (req, res) => {
-  const { name, description } = req.body;
+  const body = req.body;
+  console.log(body);
+  let response = await createLocation(body, req.user);
+  res.send(response);
+});
 
-  // Extract the user from the request (populated by authenticateJWT middleware)
-  const ssoId = req.user?.ssoId || 'unknown'; // Fallback in case user not found
-
-  // Validate the request body
-  if (!name || typeof name !== 'string' || name.trim() === '') {
-    return res.status(400).send({ error: 'Location name is required and must be a non-empty string' });
-  }
-
+async function createLocation(locationData, userId) {
+  let response;
   try {
+    const { name, description } = locationData;
+
+    // Validate the location name
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      throw new Error('Location name is required and must be a non-empty string.');
+    }
+
+    // Upsert the location
     const location = await prisma.locations.upsert({
       where: { name: name.trim() },
       update: { description: description?.trim() || null },
       create: { name: name.trim(), description: description?.trim() || null },
     });
 
-    /* await prisma.auditLogs.create({
+    // Audit Log
+    await prisma.auditLogs.create({
       data: {
-        ssoId: ssoId,
+        ssoId: userId,
         Action: 'CREATE',
         Table: 'Locations',
         Details: {
-          locationName: location.name,
+          locationId: location.id,
+          name: location.name,
           description: location.description,
         },
       },
-    });*/
+    });
 
-    res.status(200).send(location);
+    response = location;
   } catch (error) {
-    console.error('Error creating location:', error);
-    res.status(500).send({ error: 'Failed to create location' });
+    console.error('Error in createLocation:', error);
+    response = { error: error.message };
   }
-});
+  return response;
+}
 
 export default router;
