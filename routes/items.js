@@ -180,7 +180,7 @@ async function createItem(item, userId) {
   try {
     console.log('Incoming item:', item);
 
-    const { name, description, location, manufacturedYear, categoryName, markers, isAvailable } = item || {};
+    const { name, description, location, manufacturedYear, categoryName, markers, isAvailable, qr } = item || {};
 
     if (!categoryName || categoryName.trim() === '') {
       throw new Error('Category name is missing.');
@@ -229,6 +229,7 @@ async function createItem(item, userId) {
         isAvailable: isAvailable ?? true,
         markers: markers ?? [],
         categoryName,
+        qr: qr
       },
       select: {
         id: true,
