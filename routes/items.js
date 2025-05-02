@@ -84,7 +84,8 @@ router.delete('/:id', authenticateJWT, async (req, res) => {
  */
 router.post('/loan/:itemId', authenticateJWT, async (req, res) => {
   const params = req.params;
-  let response = await loanItem(req.user, [params.itemId]);
+  const body = req.body;
+  let response = (params.itemId=="")?await loanItems(req.user, body):await loanItem(req.user, params.itemId); 
   res.send(response);
 });
 
@@ -287,7 +288,6 @@ async function deleteItem(itemId) {
 async function loanItem(userId, items) {
   let response;
   try {
-    items.map(async (itemId) => {
       response = await prisma.loanedItems.create({
         data: {
           userId: userId,
@@ -315,7 +315,52 @@ async function loanItem(userId, items) {
           Details: { device: itemId },
         },
       });
-    });
+  } catch (e) {
+    response = e;
+    console.log(e);
+  }
+  return response;
+}
+
+async function loanItems(userId, items) {
+  let response;
+  const itemIds = items.map((item)=>item.itemId)
+  const loanedItems = items.map((item)=>{
+    return {
+      userId: userId,
+      itemId: item.itemId,
+      locationName: 'With User',
+    }
+  })
+  const auditLogs = items.map((item)=>{
+    return {
+      ssoId: userId,
+      Action: 'LOAN_DEVICE',
+      Table: 'LoanedItem',
+      Details: { device: item.itemId },
+    }
+  })
+  try {
+      response = await prisma.loanedItems.createMany({
+        data: loanedItems,
+        select: {
+          loanId: true,
+        },
+      });
+      await prisma.items.updateMany({
+        data: {
+          isAvailable: false,
+          currentLocation: 'With User',
+        },
+        where: {
+          id: {
+            in: itemIds
+          },
+        },
+      });
+      await prisma.auditLogs.createMany({
+        data: auditLogs,
+      });
   } catch (e) {
     response = e;
     console.log(e);

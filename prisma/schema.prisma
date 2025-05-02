@@ -25,6 +25,8 @@ model Items {
   isAvailable        Boolean              @default(true)
   currentLocation    String               @default("")
   manufacturedYear   Int?
+  QRCode             QRCodes?             @relation(fields: [qr], references: [id])
+  qr                 Int?
   FlagsOnItems       FlagsOnItems[]
   category           Categories           @relation(fields: [categoryName], references: [name])
   LoanedItem         LoanedItems?
@@ -58,6 +60,8 @@ model LoanedItemsHistory {
 model Locations {
   name               String               @id @unique
   description        String?
+  QRCode             QRCodes?             @relation(fields: [qr], references: [id])
+  qr                 Int?
   LoanedItem         LoanedItems[]
   LoanedItemsHistory LoanedItemsHistory[]
 }
@@ -91,11 +95,6 @@ model AuditLogs {
   User      Users    @relation(fields: [ssoId], references: [ssoId])
 }
 
-model QRCodes {
-  createdAt DateTime @default(now())
-  id        Int      @id @default(autoincrement())
-}
-
 enum CRUD {
   CREATE
   READ
@@ -127,4 +126,12 @@ model Comments {
   createdAt DateTime @default(now())
   itemId    String
   item      Items    @relation(fields: [itemId], references: [id])
+}
+
+model QRCodes {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) // Timestamp for creation
+  Items Items[]
+
+  Locations Locations[]
 }
