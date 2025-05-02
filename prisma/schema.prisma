@@ -25,8 +25,8 @@ model Items {
   isAvailable        Boolean              @default(true)
   currentLocation    String               @default("")
   manufacturedYear   Int?
-  QRCode QRCodes @relation(fields: [qr], references: [id])
-  qr Int
+  QRCode             QRCodes?             @relation(fields: [qr], references: [id])
+  qr                 Int?
   FlagsOnItems       FlagsOnItems[]
   category           Categories           @relation(fields: [categoryName], references: [name])
   LoanedItem         LoanedItems?
@@ -60,8 +60,8 @@ model LoanedItemsHistory {
 model Locations {
   name               String               @id @unique
   description        String?
-  QRCode QRCodes @relation(fields: [qr], references: [id])
-  qr Int
+  QRCode             QRCodes?             @relation(fields: [qr], references: [id])
+  qr                 Int?
   LoanedItem         LoanedItems[]
   LoanedItemsHistory LoanedItemsHistory[]
 }
