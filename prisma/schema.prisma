@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -17,49 +11,48 @@ model Users {
   ssoId              String               @id
   ssoName            String?
   isAdmin            Boolean              @default(false)
+  AuditLogs          AuditLogs[]
   LoanedItem         LoanedItems[]
   LoanedItemsHistory LoanedItemsHistory[]
-  AuditLogs          AuditLogs[]
 }
 
 model Items {
   id                 String               @id @default(uuid())
   name               String
-  isAvailable        Boolean              @default(true)
-  currentLocation    String               @default("")
   description        String?
-  category           Categories           @relation(fields: [categoryName], references: [name])
   categoryName       String
   markers            Json?
+  isAvailable        Boolean              @default(true)
+  currentLocation    String               @default("")
   manufacturedYear   Int?
-  LoanedItem         LoanedItems[]
-  LoanedItemsHistory LoanedItemsHistory[]
   FlagsOnItems       FlagsOnItems[]
+  category           Categories           @relation(fields: [categoryName], references: [name])
+  LoanedItem         LoanedItems?
+  LoanedItemsHistory LoanedItemsHistory[]
+  comments           Comments[] // Add this relation field
 }
 
 model LoanedItems {
   loanId       String    @id @default(uuid())
-  user         Users     @relation(fields: [userId], references: [ssoId])
   userId       String
-  item         Items     @relation(fields: [itemId], references: [id])
-  itemId       String
+  itemId       String    @unique
   loanedDate   DateTime  @default(now())
-  location     Locations @relation(fields: [locationName], references: [name])
   locationName String
-
-  @@unique([itemId])
+  item         Items     @relation(fields: [itemId], references: [id])
+  location     Locations @relation(fields: [locationName], references: [name])
+  user         Users     @relation(fields: [userId], references: [ssoId])
 }
 
 model LoanedItemsHistory {
   loanId       String    @id @default(uuid())
-  user         Users     @relation(fields: [userId], references: [ssoId])
   userId       String
-  item         Items     @relation(fields: [itemId], references: [id])
   itemId       String
   loanedDate   DateTime
   returnedDate DateTime  @default(now())
-  location     Locations @relation(fields: [locationName], references: [name])
   locationName String
+  item         Items     @relation(fields: [itemId], references: [id])
+  location     Locations @relation(fields: [locationName], references: [name])
+  user         Users     @relation(fields: [userId], references: [ssoId])
 }
 
 model Locations {
@@ -76,16 +69,31 @@ model Categories {
 
 model FlagsOnItems {
   flagId   String @id @default(uuid())
-  item     Items  @relation(fields: [itemId], references: [id])
   itemId   String
-  flag     Flags  @relation(fields: [flagName], references: [name])
   flagName String
+  flag     Flags  @relation(fields: [flagName], references: [name])
+  item     Items  @relation(fields: [itemId], references: [id])
 }
 
 model Flags {
   name         String         @id @unique
   description  String
   FlagsOnItems FlagsOnItems[]
+}
+
+model AuditLogs {
+  LogId     String   @id @default(uuid())
+  ssoId     String
+  Action    CRUD
+  Table     Table
+  Details   Json?
+  timestamp DateTime @default(now())
+  User      Users    @relation(fields: [ssoId], references: [ssoId])
+}
+
+model QRCodes {
+  createdAt DateTime @default(now())
+  id        Int      @id @default(autoincrement())
 }
 
 enum CRUD {
@@ -100,6 +108,7 @@ enum CRUD {
   FLAG_DEVICE
   SCAN_QR
   FAILED_LOGIN
+  COMMENT
 }
 
 enum Table {
@@ -112,17 +121,10 @@ enum Table {
   Flags
 }
 
-model AuditLogs {
-  LogId     String   @id @default(uuid())
-  User      Users    @relation(fields: [ssoId], references: [ssoId])
-  ssoId     String
-  Action    CRUD
-  Table     Table
-  Details   Json? // Stores specific information about the event
-  timestamp DateTime @default(now())
-}
-
-model QRCodes {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now()) // Timestamp for creation
+model Comments {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  itemId    String
+  item      Items    @relation(fields: [itemId], references: [id])
 }
