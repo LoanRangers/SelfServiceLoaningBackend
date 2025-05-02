@@ -41,11 +41,11 @@ router.get('/item/:id', authenticateJWT, async (req, res) => {
   const params = req.params
   try {
     let item = await prisma.items.findFirst({
-      where: {id: params.id}
+      where: {qr: parseInt(params.id)}
     })
     res.status(200).send(item)
   }catch (error){
-    console.error("Failed to get item by qr")
+    console.error("Failed to get item by qr", error)
     res.status(500).send({error:"Failed to get item by qr"})
   }
 })
