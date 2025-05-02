@@ -51,8 +51,6 @@ router.get('/callback', async (req, res) => {
     const appAccessToken = generateAccessToken(user);
     const appRefreshToken = generateRefreshToken(user);
 
-    console.log(user);
-
     const dbUser = await prisma.users.findUnique({ where: { ssoId: user.nickname } });
 
     if (!dbUser) {
@@ -77,23 +75,36 @@ router.get('/callback', async (req, res) => {
 });
 
 router.post('/refresh-token', (req, res) => {
-  const { refreshToken } = req.body;
+  const refreshToken = req.cookies.auth_tokens.appRefreshToken;
   if (!refreshToken) return res.sendStatus(403);
 
-  verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    const newAccessToken = generateAccessToken({ id: user.id, username: user.username, role: user.role });
-    res.json({ accessToken: newAccessToken });
+  verify(refreshToken.split(' ')[1], process.env.JWT_REFRESH_SECRET, (err, user) => {
+    if (err) {
+      console.log('Refresh verification failed.');
+      return res.sendStatus(403);
+    }
+    const newAccessToken = generateAccessToken({ user });
+    console.log('refreshed appAccessToken successfully');
+    res
+      .status(200)
+      .cookie(
+        'auth_tokens',
+        { ...req.cookies.auth_tokens, appAccessToken: newAccessToken },
+        {
+          httpOnly: false,
+          secure: true,
+        }
+      )
+      .send();
   });
 });
 
 router.get('/me', async (req, res) => {
-  let token
-  try{
+  let token;
+  try {
     token = req.cookies.auth_tokens.OAuth;
-    //console.log(req.cookies);
-  }catch(e){
-    console.log(e)
+  } catch (e) {
+    console.log(e);
   }
 
   if (!token) {

@@ -24,6 +24,19 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get('/generate/:count', authenticateJWT, async (req, res) => {
+  const params = req.params;
+  try {
+    const qrCodes = await prisma.qRCodes.createManyAndReturn({
+      data: Array.from({ length: params.count }, () => ({})),
+    });
+    res.status(200).send(qrCodes);
+  } catch (error) {
+    console.error('Error generating QR codes: ', error);
+    res.status(500).send({ error: 'Failed to generate QR codes' });
+  }
+});
+
 /**
  * @swagger
  * /qrcodes:
