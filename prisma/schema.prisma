@@ -32,6 +32,8 @@ model Items {
   categoryName       String
   markers            Json?
   manufacturedYear   Int?
+  QRCode QRCodes @relation(fields: [qr], references: [id])
+  qr Int
   LoanedItem         LoanedItems[]
   LoanedItemsHistory LoanedItemsHistory[]
   FlagsOnItems       FlagsOnItems[]
@@ -125,4 +127,6 @@ model AuditLogs {
 model QRCodes {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now()) // Timestamp for creation
+
+  Items Items[]
 }
