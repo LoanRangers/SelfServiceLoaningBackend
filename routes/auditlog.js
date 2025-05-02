@@ -17,11 +17,10 @@ router.use(jsonParser);
  */
 router.post('/logs', jsonParser, async (req, res) => {
   try {
-    const body = req.body
-    //const auditLogs = await prisma.auditLogs.findMany();
-    const auditLogs = await auditLog(body.page)
-    console.log(auditLogs)
-    res.send(auditLogs);
+    const body = req.body;
+    const totalLogs = await prisma.auditLogs.count(); // Get the total count of logs
+    const auditLogs = await auditLog(body.page);
+    res.send({ logs: auditLogs, total: totalLogs }); // Return logs and total count
   } catch (error) {
     console.error('Error fetching audit logs:', error);
     res.status(500).send({ error: 'Failed to fetch audit logs' });
@@ -90,6 +89,9 @@ async function auditLog(pageNumber) {
   let response;
   try {
     response = await prisma.auditLogs.findMany({
+      orderBy: {
+        timestamp: 'desc', // Sort by timestamp in descending order
+      },
       skip: (pageNumber - 1) * 10,
       take: 10,
       orderBy: {

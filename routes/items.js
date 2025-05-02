@@ -49,9 +49,10 @@ router.get('/unavailable', async (req, res) => {
 router.post('/', authenticateJWT, async (req, res) => {
   const body = req.body;
   console.log(body);
-  let response = await createItem(body.name, body.description, body.category, body.location, body.manufacturedYear);
+  let response = await createItem(body, req.user);
   res.send(response);
 });
+
 
 /**
  * @swagger
@@ -173,24 +174,60 @@ async function readUnavailableItems() {
   return response;
 }
 
-async function createItem(itemName, itemDescription, categoryName, location, manufacturedYear) {
+async function createItem(item, userId) {
   let response;
   try {
-    // Ensure the location exists or create it
-    await prisma.locations.upsert({
-      where: { name: location },
-      update: {}, // If it exists, do nothing
-      create: { name: location }, // If it doesn't exist, create it
+    console.log('Incoming item:', item);
+
+    const { name, description, location, manufacturedYear, categoryName, markers, isAvailable } = item || {};
+
+    if (!categoryName || categoryName.trim() === '') {
+      throw new Error('Category name is missing.');
+    }
+    if (!location || location.trim() === '') {
+      throw new Error('Location is missing.');
+    }
+
+    // First, try to find if the category already exists
+    const existingCategory = await prisma.categories.findUnique({
+      where: { name: categoryName },
     });
 
-    // Create the item without referencing the category
-    response = await prisma.items.create({
+    // If not found, create and log the new category
+    if (!existingCategory) {
+      await prisma.categories.create({
+        data: { name: categoryName },
+      });
+
+      // Log the new category creation
+      await prisma.auditLogs.create({
+        data: {
+          ssoId: userId,
+          Action: 'CREATE',
+          Table: 'Categories',
+          Details: {
+            categoryName: categoryName,
+          },
+        },
+      });
+    }
+
+    // Same for location (no extra logging needed unless you want to)
+    await prisma.locations.upsert({
+      where: { name: location },
+      update: {},
+      create: { name: location },
+    });
+
+    const createdItem = await prisma.items.create({
       data: {
-        name: itemName,
-        description: itemDescription,
+        name,
+        description,
         currentLocation: location,
         manufacturedYear: parseInt(manufacturedYear),
-        category: categoryName,
+        isAvailable: isAvailable ?? true,
+        markers: markers ?? [],
+        categoryName,
       },
       select: {
         id: true,
@@ -198,40 +235,30 @@ async function createItem(itemName, itemDescription, categoryName, location, man
         description: true,
       },
     });
+
+    // Log the item creation
     await prisma.auditLogs.create({
       data: {
         ssoId: userId,
-        Action: 'CREATE_ITEM',
-        Table: 'Items',
-        Details: {
-          name: itemName,
-          category: categoryNames,
-        },
-      },
-    });
-    // Log the audit entry
-    /*
-    await prisma.auditLogs.create({
-      data: {
-        ssoId: 'system', // Replace with the actual user ID performing the action
         Action: 'CREATE',
         Table: 'Items',
         Details: {
-          itemId: response.id,
-          itemName: itemName,
-          itemDescription: itemDescription,
-          location: location,
-          manufacturedYear: manufacturedYear,
+          itemId: createdItem.id,
+          name: createdItem.name,
+          description: createdItem.description,
         },
       },
     });
-    */
+
+    response = createdItem;
+
   } catch (e) {
-    console.error('Error in createItem:', e); // Log the error for debugging
+    console.error('Error in createItem:', e);
     response = { error: e.message };
   }
   return response;
 }
+
 
 async function deleteItem(itemId) {
   let response;
@@ -241,6 +268,7 @@ async function deleteItem(itemId) {
         itemId: itemId,
       },
     });
+    // Log the audit entry
     await prisma.auditLogs.create({
       data: {
         ssoId: userId,
@@ -249,15 +277,6 @@ async function deleteItem(itemId) {
         Details: { device: itemId },
       },
     });
-
-    // Log the audit entry
-    /*
-    await logAudit(null, 'DELETE_ITEM', null, {
-      itemId: itemId,
-      itemName: item?.name,
-      itemDescription: item?.description,
-    });
-    */
   } catch (e) {
     response = e;
     console.log(e);
