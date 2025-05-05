@@ -10,12 +10,15 @@ import https from 'https';
 import users from './routes/users.js';
 import items from './routes/items.js';
 import flags from './routes/flags.js';
+import flagToItem from './routes/flagToItem.js';
 import locations from './routes/locations.js';
 import categories from './routes/categories.js';
 import auth from './routes/auth.js';
 import auditlog from './routes/auditlog.js';
 import qrCodes from './routes/qrCodes.js';
 import comments from './routes/comments.js';
+import tags from './routes/tags.js';
+import itemsTags from './routes/itemsTags.js';
 
 const options = {
   definition: {
@@ -44,11 +47,15 @@ app.use('/auth', auth);
 app.use('/users', users);
 app.use('/items', items);
 app.use('/flags', flags);
+app.use('/flagToItem', flagToItem);
+app.use('/flags/items', flagToItem);
 app.use('/locations', locations);
 app.use('/categories', categories);
 app.use('/auditlog', auditlog);
 app.use('/qrCodes', qrCodes);
 app.use('/comments', comments);
+app.use('/tags', tags);
+app.use('/itemsTags', itemsTags);
 
 const server = https.createServer(appOptions, app);
 
