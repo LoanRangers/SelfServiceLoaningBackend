@@ -32,6 +32,7 @@ model Items {
   LoanedItem         LoanedItems?
   LoanedItemsHistory LoanedItemsHistory[]
   comments           Comments[] // Add this relation field
+  tags               ItemsTags[]
 }
 
 model LoanedItems {
@@ -108,6 +109,8 @@ enum CRUD {
   SCAN_QR
   FAILED_LOGIN
   COMMENT
+  FLAG
+  UNFLAG
 }
 
 enum Table {
@@ -118,6 +121,7 @@ enum Table {
   Categories
   FlagsOnItems
   Flags
+  Tags
 }
 
 model Comments {
@@ -134,4 +138,20 @@ model QRCodes {
   Items Items[]
 
   Locations Locations[]
+}
+
+model Tags {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  ItemsTags ItemsTags[]
+}
+
+model ItemsTags {
+  id      String @id @default(uuid())
+  itemId  String
+  tagId   String
+  item    Items  @relation(fields: [itemId], references: [id])
+  tag     Tags   @relation(fields: [tagId], references: [id])
+
+  @@unique([itemId, tagId]) // Prevent duplicate tags for the same item
 }
