@@ -37,18 +37,18 @@ router.get('/generate/:count', authenticateJWT, async (req, res) => {
   }
 });
 
-router.get('/item/:id', authenticateJWT, async (req, res) => {
-  const params = req.params
+router.get('/id', authenticateJWT, async (req, res) => {
   try {
-    let item = await prisma.items.findFirst({
-      where: {qr: parseInt(params.id)}
-    })
-    res.status(200).send(item)
-  }catch (error){
-    console.error("Failed to get item by qr", error)
-    res.status(500).send({error:"Failed to get item by qr"})
+    const id = await prisma.qRCodes.aggregate({
+      _max: {
+        id: true,
+      },
+    });
+    res.status(200).send(id);
+  } catch (error) {
+    res.status(500).send({ error: 'Failed to get latest qr Id' });
   }
-})
+});
 
 /**
  * @swagger

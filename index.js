@@ -52,7 +52,7 @@ app.use('/flags/items', flagToItem);
 app.use('/locations', locations);
 app.use('/categories', categories);
 app.use('/auditlog', auditlog);
-app.use('/qrCodes', qrCodes);
+app.use('/qr', qrCodes);
 app.use('/comments', comments);
 app.use('/tags', tags);
 app.use('/itemsTags', itemsTags);
