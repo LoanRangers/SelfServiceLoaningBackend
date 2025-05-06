@@ -441,6 +441,7 @@ async function loanHistory(userId, pageNumber, maxItems) {
   let response;
   try {
     response = await prisma.loanedItemsHistory.findMany({
+      orderBy: { returnedDate: 'desc' },
       skip: (pageNumber - 1) * maxItems,
       take: maxItems,
       where: { userId: userId },
