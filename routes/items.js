@@ -53,7 +53,6 @@ router.post('/', authenticateJWT, async (req, res) => {
   res.send(response);
 });
 
-
 /**
  * @swagger
  * /items:
@@ -82,10 +81,9 @@ router.delete('/:id', authenticateJWT, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/loan/:itemId', authenticateJWT, async (req, res) => {
-  const params = req.params;
+router.post('/loan/', authenticateJWT, async (req, res) => {
   const body = req.body;
-  let response = (params.itemId=="")?await loanItems(req.user, body):await loanItem(req.user, params.itemId); 
+  let response = await loanItems(req.user, body.items);
   res.send(response);
 });
 
@@ -229,7 +227,7 @@ async function createItem(item, userId) {
         isAvailable: isAvailable ?? true,
         markers: markers ?? [],
         categoryName,
-        qr: qr
+        qr: qr,
       },
       select: {
         id: true,
@@ -253,14 +251,12 @@ async function createItem(item, userId) {
     });
 
     response = createdItem;
-
   } catch (e) {
     console.error('Error in createItem:', e);
     response = { error: e.message };
   }
   return response;
 }
-
 
 async function deleteItem(itemId) {
   let response;
@@ -289,33 +285,33 @@ async function deleteItem(itemId) {
 async function loanItem(userId, items) {
   let response;
   try {
-      response = await prisma.loanedItems.create({
-        data: {
-          userId: userId,
-          itemId: itemId,
-          locationName: 'With User',
-        },
-        select: {
-          loanId: true,
-        },
-      });
-      await prisma.items.update({
-        data: {
-          isAvailable: false,
-          currentLocation: 'With User',
-        },
-        where: {
-          id: itemId,
-        },
-      });
-      await prisma.auditLogs.create({
-        data: {
-          ssoId: userId,
-          Action: 'LOAN_DEVICE',
-          Table: 'LoanedItem',
-          Details: { device: itemId },
-        },
-      });
+    response = await prisma.loanedItems.create({
+      data: {
+        userId: userId,
+        itemId: itemId,
+        locationName: 'With User',
+      },
+      select: {
+        loanId: true,
+      },
+    });
+    await prisma.items.update({
+      data: {
+        isAvailable: false,
+        currentLocation: 'With User',
+      },
+      where: {
+        id: itemId,
+      },
+    });
+    await prisma.auditLogs.create({
+      data: {
+        ssoId: userId,
+        Action: 'LOAN_DEVICE',
+        Table: 'LoanedItem',
+        Details: { device: itemId },
+      },
+    });
   } catch (e) {
     response = e;
     console.log(e);
@@ -325,43 +321,43 @@ async function loanItem(userId, items) {
 
 async function loanItems(userId, items) {
   let response;
-  const itemIds = items.map((item)=>item.itemId)
-  const loanedItems = items.map((item)=>{
+  const itemIds = items.map((item) => item.id);
+  const loanedItems = items.map((item) => {
     return {
       userId: userId,
-      itemId: item.itemId,
+      itemId: item.id,
       locationName: 'With User',
-    }
-  })
-  const auditLogs = items.map((item)=>{
+    };
+  });
+  const auditLogs = items.map((item) => {
     return {
       ssoId: userId,
       Action: 'LOAN_DEVICE',
       Table: 'LoanedItem',
-      Details: { device: item.itemId },
-    }
-  })
+      Details: { device: item.id },
+    };
+  });
   try {
-      response = await prisma.loanedItems.createMany({
-        data: loanedItems,
-        select: {
-          loanId: true,
+    response = await prisma.loanedItems.createMany({
+      data: loanedItems,
+      select: {
+        count: true,
+      },
+    });
+    await prisma.items.updateMany({
+      data: {
+        isAvailable: false,
+        currentLocation: 'With User',
+      },
+      where: {
+        id: {
+          in: itemIds,
         },
-      });
-      await prisma.items.updateMany({
-        data: {
-          isAvailable: false,
-          currentLocation: 'With User',
-        },
-        where: {
-          id: {
-            in: itemIds
-          },
-        },
-      });
-      await prisma.auditLogs.createMany({
-        data: auditLogs,
-      });
+      },
+    });
+    await prisma.auditLogs.createMany({
+      data: auditLogs,
+    });
   } catch (e) {
     response = e;
     console.log(e);
