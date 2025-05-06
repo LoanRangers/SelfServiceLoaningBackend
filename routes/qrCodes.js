@@ -50,6 +50,19 @@ router.get('/item/:id', authenticateJWT, async (req, res) => {
   }
 });
 
+router.get('/location/:id', authenticateJWT, async (req, res) => {
+  const params = req.params;
+  try {
+    let item = await prisma.locations.findFirst({
+      where: { qr: parseInt(params.id) },
+    });
+    res.status(200).send(item);
+  } catch (error) {
+    console.error('Failed to get location by qr', error);
+    res.status(500).send({ error: 'Failed to get location by qr' });
+  }
+});
+
 router.get('/id', authenticateJWT, async (req, res) => {
   try {
     const id = await prisma.qRCodes.aggregate({
