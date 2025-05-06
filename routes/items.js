@@ -98,10 +98,9 @@ router.post('/loan/', authenticateJWT, async (req, res) => {
  *       500:
  *         description: Internal server error
  */
-router.post('/return/:itemId', authenticateJWT, async (req, res) => {
-  const params = req.params;
+router.post('/return/', authenticateJWT, async (req, res) => {
   const body = req.body;
-  let response = await returnItem(req.user, params.itemId, body.locationName);
+  let response = await returnItems(req.user, body.items, body.locationName);
   res.send(response);
 });
 
@@ -227,7 +226,7 @@ async function createItem(item, userId) {
         isAvailable: isAvailable ?? true,
         markers: markers ?? [],
         categoryName,
-        qr: qr,
+        qr: parseInt(qr),
       },
       select: {
         id: true,
@@ -411,6 +410,62 @@ async function returnItem(userId, itemId, locationName) {
   } catch (e) {
     response = e;
     console.log(e);
+  }
+  return response;
+}
+
+async function returnItems(userId, items, locationName) {
+  let response;
+  const itemIds = items.map((item) => item.item.id)
+  console.log('itemIds', itemIds);
+  console.log('userId', userId);
+  try {
+    const rows = await prisma.loanedItems.findMany({
+      where: {
+        itemId: {in: itemIds}
+      },
+      select: {
+        itemId: true,
+        loanedDate: true,
+      }
+    });
+
+    response = await prisma.$transaction([
+      prisma.loanedItems.deleteMany({
+        where: {
+          itemId: {in: itemIds}
+        }
+      }),
+      prisma.loanedItemsHistory.createMany({
+        data: rows.map((row) => ({
+          userId: userId,
+          itemId: row.itemId,
+          loanedDate: row.loanedDate,
+          locationName: locationName, 
+        }))
+      }),
+      prisma.items.updateMany({
+        data: {
+          isAvailable: true, 
+          currentLocation: locationName,
+        },
+        where: {
+          id: {in: itemIds}
+        }
+      })
+    ])
+    await prisma.auditLogs.createMany({
+      data: rows.map((row) => ({
+        ssoId: userId,
+        Action: 'RETURN_DEVICE',
+        Table: 'LoanedItem',
+        Details: {device: row}
+      }))
+    })
+  }
+  catch (e) {
+    console.log(e);
+    response = e;
   }
   return response;
 }

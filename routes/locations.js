@@ -73,18 +73,22 @@ router.post('/', authenticateJWT, async (req, res) => {
 async function createLocation(locationData, userId) {
   let response;
   try {
-    const { name, description } = locationData;
+    const { name, description, qr } = locationData;
 
     // Validate the location name
     if (!name || typeof name !== 'string' || name.trim() === '') {
       throw new Error('Location name is required and must be a non-empty string.');
+    }
+    // validate qr code
+    if (!locationData.qr) {
+      throw new Error('no qr');
     }
 
     // Upsert the location
     const location = await prisma.locations.upsert({
       where: { name: name.trim() },
       update: { description: description?.trim() || null },
-      create: { name: name.trim(), description: description?.trim() || null },
+      create: { name: name.trim(), description: description?.trim() || null, qr: parseInt(qr) },
     });
 
     // Audit Log
