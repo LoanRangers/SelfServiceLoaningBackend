@@ -16,7 +16,7 @@ router.use(cookieParser());
 const GITLAB_BASE_URL = 'https://gitlab-ext.utu.fi';
 const CLIENT_ID = process.env.GITLAB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITLAB_CLIENT_SECRET;
-const REDIRECT_URI = process.env.APP_URL + ':' + process.env.APP_PORT + '/auth/callback';
+const REDIRECT_URI = process.env.APP_URL + '/auth/callback';
 
 router.get('/gitlab', (req, res) => {
   const gitlabAuthUrl = `${GITLAB_BASE_URL}/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=openid%20email%20profile`;
