@@ -66,8 +66,12 @@ router.get('/callback', async (req, res) => {
     };
 
     // Step 5: Set user session (or send JWT)
-    res.cookie('auth_tokens', tokens, { httpOnly: false, secure: true });
-    res.redirect(process.env.FRONTEND_URL + ':' + process.env.FRONTEND_PORT + '/');
+    res.cookie('auth_tokens', tokens, {
+      httpOnly: false,
+      secure: true,
+      sameSite: 'none',
+    });
+    res.redirect(process.env.FRONTEND_URL + '/');
   } catch (error) {
     console.error('GitLab OAuth error:', error.response?.data || error.message);
     res.status(500).json({ error: 'GitLab authentication failed' });
@@ -93,6 +97,7 @@ router.post('/refresh-token', (req, res) => {
         {
           httpOnly: false,
           secure: true,
+          sameSite: 'none',
         }
       )
       .send();
@@ -102,6 +107,7 @@ router.post('/refresh-token', (req, res) => {
 router.get('/me', async (req, res) => {
   let token;
   try {
+    console.log(req.cookies);
     token = req.cookies.auth_tokens.OAuth;
   } catch (e) {
     console.log(e);
