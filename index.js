@@ -59,6 +59,6 @@ app.use('/itemsTags', itemsTags);
 
 const server = https.createServer(appOptions, app);
 
-server.listen(process.env.APP_PORT, () =>
+server.listen(process.env.port, () =>
   console.log('App running at ' + process.env.APP_URL + ':' + process.env.APP_PORT)
 );
