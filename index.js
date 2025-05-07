@@ -57,6 +57,10 @@ app.use('/comments', comments);
 app.use('/tags', tags);
 app.use('/itemsTags', itemsTags);
 
-const server = https.createServer(appOptions, app);
+//const server = https.createServer(appOptions, app);
 
-server.listen(process.env.PORT, () => console.log('App running at ' + process.env.APP_URL + ':' + process.env.PORT));
+//server.listen(process.env.PORT, () => console.log('App running at ' + process.env.APP_URL + ':' + process.env.PORT));
+
+app.listen(process.env.PORT, () => {
+  console.log('Server is running');
+});
