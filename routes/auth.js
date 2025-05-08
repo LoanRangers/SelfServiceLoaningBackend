@@ -67,7 +67,7 @@ router.get('/callback', async (req, res) => {
 
     // Step 5: Set user session (or send JWT)
     res.cookie('auth_tokens', tokens, {
-      httpOnly: false,
+      httpOnly: true,
       secure: true,
       sameSite: 'none',
     });
