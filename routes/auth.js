@@ -70,6 +70,7 @@ router.get('/callback', async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
+      domain: 'loanrangers.github.io',
     });
     res.redirect(process.env.FRONTEND_URL + '/');
   } catch (error) {
